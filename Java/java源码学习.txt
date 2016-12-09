@@ -1,0 +1,104 @@
+@base jdk1.8
+@author zhang.cc
+
+
+Number
+       Integer.class
+       +
+       +
+       +
+       //静态toString（int，int）默认toString（int，10）可以进行进制转换
+       public static String toString(int i, int radix) {
+        if (radix < Character.MIN_RADIX || radix > Character.MAX_RADIX)
+            radix = 10;
+
+        /* Use the faster version */
+        if (radix == 10) {
+            return toString(i);
+        }
+        //这里设置33位的原因：若为负数留出空间，采用二进制需要空间最大，则以二进制为标准，并且int占位4*8位，所以申请空间33
+        char buf[] = new char[33];
+        boolean negative = (i < 0);
+        int charPos = 32;
+
+        if (!negative) {
+            i = -i;
+        }
+
+        while (i <= -radix) {
+            buf[charPos--] = digits[-(i % radix)];
+            i = i / radix;
+        }
+        buf[charPos] = digits[-i];
+
+        if (negative) {
+            buf[--charPos] = '-';
+        }
+
+        return new String(buf, charPos, (33 - charPos));
+    }
+        +
+        +
+        +
+        //Integer的缓存机制，把-127到high的Integer对象缓存起来，减少内存开销
+        private static class IntegerCache {
+        static final int low = -128;
+        static final int high;
+        static final Integer cache[];
+
+        static {
+            // high value may be configured by property
+            int h = 127;
+            String integerCacheHighPropValue =
+                sun.misc.VM.getSavedProperty("java.lang.Integer.IntegerCache.high");
+            if (integerCacheHighPropValue != null) {
+                try {
+                    int i = parseInt(integerCacheHighPropValue);
+                    i = Math.max(i, 127);
+                    // Maximum array size is Integer.MAX_VALUE
+                    h = Math.min(i, Integer.MAX_VALUE - (-low) -1);
+                } catch( NumberFormatException nfe) {
+                    // If the property cannot be parsed into an int, ignore it.
+                }
+            }
+            high = h;
+
+            cache = new Integer[(high - low) + 1];
+            int j = low;
+            for(int k = 0; k < cache.length; k++)
+                cache[k] = new Integer(j++);
+
+            // range [-128, 127] must be interned (JLS7 5.1.7)
+            assert IntegerCache.high >= 127;
+        }
+        //保证单例
+        private IntegerCache() {}
+    }
+        +
+        +
+        +
+        //Integer hashcode（）返回原值
+    public int hashCode() {
+        return Integer.hashCode(value);
+    }
+        public static int hashCode(int value) {
+        return value;
+    }   
+
+        +
+        +
+        +
+      //作用：取得最高位的1其他为0的数
+      1、第一步的作用是把最高位1右移移位，并与原数据按位取或。那么这就使得最高位和它的下一位是连续两个1。
+      2、第二步的作用是把刚刚移位得到连续两个1继续右移两位并与原数据按位取或。那么这就使得最高两位和它的下两个连续位组成四个连续的1。
+      3、 以此类推，最终得到的i是从开始的最高位到结束全是1。并减去i不带符号的右移一位，即可得到一个int数据的最高位的值。
+      4、上述情况是针对于i不为零和负数的情况，如果i为零，那么得到的结果始终为零。如果i位负数，那么得到的结果始终是-2147483648。即等于Integer.MIN_VALUE。（原因在于负数的最高位始终为1，即是负数的符号位）
+      public static int highestOneBit(int i) {
+        // HD, Figure 3-1
+        i |= (i >>  1);
+        i |= (i >>  2);
+        i |= (i >>  4);
+        i |= (i >>  8);
+        i |= (i >> 16);
+        return i - (i >>> 1);
+    }
